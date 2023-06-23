@@ -9,7 +9,7 @@ dependencies:
   - _sysroot_linux-64_curr_repodata_hack=3
   - alsa-lib=1.2.9
   - bc=1.07.1
-  - bcftools=1.17
+  - bcftools=1.16
   - bedtools=2.31.0
   - bioawk=1.0
   - bowtie2=2.5.1

@@ -8,7 +8,8 @@ process Setup {
         // A value denoting whether PCR deduplication was
         // enabled.
         val pcrDedupe
-
+        // A value containing which alignment
+        // mode was used during the analysis.
         val alignmentMode
         // The minimum read length allowed post trimmming (for
         // use in the parameters file)
@@ -46,28 +47,32 @@ process Setup {
     sample.
 
     The parameters file contains:
-        1. The name of the reference supplied
-        2. The minimum read length allowed after trimmming
-        3. The minimum coverage threshold used for masking
-        4. The minimum base call quality used for variant calling and masking
-        5. The minimum mapping quality used for variant calling and masking.
-        6. Whether picard was used in the anlaysis.
-        7. The name of the primer file (if provided)
-        8. The name of the host reference used (if provided)
+        1. The minimum read length allowed after trimmming.
+        2. Whether PCR deduplication was enabled.
+        3. The name of host reference genome (if supplied)
+        4. The name of the reference genome supplied
+        5. The alignment mode used for reference-based assembly
+        6. The minimum coverage threshold used for masking
+        7. The minimum base call quality used for variant calling and masking
+        8. The minimum mapping quality used for variant calling and masking
 
     The summary file will always contain:
         1. The sample
         2. Raw Reads
         3. Reads after trimming
-        4. Mapped reads
-        5. SNPs passing filtering
-        6. Indels passing filtering
-        7. sites masked
-        8. coverage
+        4. Contigs Generated
+        5. Scaffolds Generated
+        6. Contigs aligned to reference
+        7. Variants applied to the reference
+        8. Reads aligned to the corrected reference
+        9. Average Read Depth
+        10. SNPs passing filtering
+        11. Indels passing filtering
+        12. sites masked
+        13. coverage
     As well, depending on the user's options, the summary file may contain:
+        - Reads after PCR Deduplication
         - Reads after host removal
-        - mapped, deduped reads
-        - mapped, clipped reads
     */
     """
     #!/bin/bash

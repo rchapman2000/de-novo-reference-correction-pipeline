@@ -42,20 +42,33 @@ OPTIONAL:
     """
 }
 
+// Dynamically creates the header for the summary file based on
+// the options supplied by the user.
 def createSummaryHeader(dedupe, hostRef, hostIdx) {
     
+    // Statistics regarding the sample, number of raw reads
+    // and number of trimmed reads will always be collected.
     FinalHeader = "Sample,Raw Reads,Trimmed Reads,"
 
+    // If the user supplied the --dedupe option, this 
+    // process will occur next and a statistic of the number
+    // of reads post-deduplication will be collected.
     if (dedupe != false) {
         FinalHeader = FinalHeader + "Deduped Reads,"
     }
 
+    // If the user supplied an option for host removal (either a
+    // FASTA file or bowtie2 index), then this will occur next, and the number
+    // of reads post host removal will be collected.
     if (hostRef != false || hostIdx != false) {
         Finalheader = FinalHeader + "Non-Host Reads"
     }
 
+    // Finally, the following statistics will be collected no matter what options the
+    // user supplies.
     FinalHeader = FinalHeader + "Contigs,Scaffolds,Contigs Aligned to Reference,Variants Applid to Reference,Reads Mapped to Corrected Reference,Average Read Depth,SNPs,Indels,Masked Sites,Coverage"
 
+    // Return the assembled header.
     return FinalHeader
 }
 
@@ -82,8 +95,11 @@ params.host_bt2_index = false
 params.host_reference = false
 params.threads = 1
 
+// Grab the Illumina sequencing adapters from a
+// fasta file included with the pipeline.
 adapters = file("${baseDir}/data/adapters.fa")
 
+// Import workflow modules from the modules.nf file.
 include { Setup } from "./modules.nf"
 include { QC_Report } from "./modules.nf"
 include { Trimming } from "./modules.nf"
@@ -180,9 +196,17 @@ if (params.dedupe != false) {
 }
 
 // Parses the --localAlignment Parameter
+// By default, the pipeline will use end-to-end
+// alignment mode from bowtie2. Thus, we will
+// set these values by default. One value stores the 
+// actual parameter to be supplied to bowtie2, and the other
+// stores the value to be written in the summary file.
 alignmentParam = "--end-to-end"
 alignmentModeSummary = "End-to-End Alignment Mode"
 if (params.localAlignment != false) {
+    // If the user supplied the --localAlignment option,
+    // the parameter and summary value will be upated
+    // to enable and reflect this option.
     alignmentParam = "--local"
     alignmentModeSummary = "Local Alignment Mode"
 }
@@ -258,8 +282,6 @@ workflow {
 
     Setup( refName, dedupeParamValue, alignmentModeSummary, params.minLen, params.minCov, params.minBQ, params.minMapQ, hostRefName, summaryHeader, outDir )
 
-    //IndexReference( refData, outDir, params.threads )
-
     if (params.host_reference != false) {
         Index_Host_Reference( hostRefData, outDir, params.threads )
     }
@@ -328,6 +350,6 @@ workflow {
 
     Generate_Consensus( Call_Variants.out[0], baseDir, outDir, params.minCov, params.minBQ, params.minMapQ, Call_Variants.out[2] )
 
-    Write_Summary( Generate_Consensus.out[1], outDir )
+    Write_Summary( Generate_Consensus.out[2], outDir )
 
 }
