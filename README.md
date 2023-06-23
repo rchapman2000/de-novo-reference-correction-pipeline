@@ -49,7 +49,7 @@ If you already have the pipeline installed, you can update it using the followin
 1. Navigate to your installation directory
 ```
 # Navigate to your installation directory
-cd ref-based-assembly-pipeline
+cd de-novo-reference-correction-pipeline
 ```
 
 2. Use ```git pull``` to get the latest update
