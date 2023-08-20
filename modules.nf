@@ -425,7 +425,7 @@ process Contig_Alignment {
 
     mapped_contigs=\$(samtools view -F 0x04 -c ${base}-contig-align.bam)
 
-    summary="${existingSummary},mapped_contigs"
+    summary="${existingSummary},\$mapped_contigs"
     """
 }
 
@@ -459,8 +459,12 @@ process Correct_Reference_with_Contigs {
     samtools index ${bam}
 
     freebayes -f ${ref} -C 1 -m 0 ${bam} > ${base}-contig-align.vcf
+    
+    python3 ${baseDir}/scripts/remove_genotype_vcf.py -i ${base}-contig-align.vcf -o ${base}-contig-align-no-genotype.vcf
 
-    bcftools view -i "((INFO/AO /  INFO/DP) > (INFO/RO / INFO/DP)) & (REF != 'N')" ${base}-contig-align.vcf > ${base}-contig-align-filtered.vcf
+    python3 ${baseDir}/scripts/fix_multi_allelic.py -i ${base}-contig-align-no-genotype.vcf -o ${base}-contig-align-biallelic.vcf
+
+    bcftools view -i "((INFO/AO /  INFO/DP) > (INFO/RO / INFO/DP)) & (REF != 'N')" ${base}-contig-align-biallelic.vcf > ${base}-contig-align-filtered.vcf
 
     correction_variants=\$(grep -v "^#" ${base}-contig-align-filtered.vcf | wc -l)
 
@@ -569,7 +573,9 @@ process Call_Variants {
     samtools index ${bam}
     freebayes -q ${minBQ} -m ${minMapQ} -f ${correctedRef} ${bam} > ${base}.vcf
 
-    python3 ${baseDir}/scripts/fix_multi_allelic.py -i ${base}.vcf -o ${base}-biallelic.vcf
+    python3 ${baseDir}/scripts/remove_genotype_vcf.py -i ${base}.vcf -o ${base}-no-genotype.vcf
+
+    python3 ${baseDir}/scripts/fix_multi_allelic.py -i ${base}-no-genotype.vcf -o ${base}-biallelic.vcf
 
     vcftools --keep-only-indels --vcf ${base}-biallelic.vcf --recode --recode-INFO-all --stdout > ${base}-indels.vcf
     bgzip ${base}-indels.vcf
@@ -662,16 +668,20 @@ process Generate_Consensus {
     samtools mpileup --no-BAQ -d 100000 -x -A -q ${minMapQ} -Q ${minBQ} -f ${correctedRef} ${bam} > ${base}.pileup
     python3 ${baseDir}/scripts/pileup_to_bed.py -i ${base}.pileup -o passed-sites.bed --minCov ${minCov}
 
-    samtools mpileup --no-BAQ -d 100000 -x -A -q ${minMapQ} -Q ${minBQ} -a -f ${correctedRef} ${bam} > all-sites.pileup
-    python3 ${baseDir}/scripts/pileup_to_bed.py -i all-sites.pileup -o all-sites.bed 
+    bioawk -c fastx '{print \$name"\t0\t"length(\$seq)}' ${correctedRef} > all-sites.bed
 
-    bedtools subtract -a all-sites.bed -b passed-sites.bed > ${base}-low-cov-sites.bed
+    if [[ -s all-sites.bed ]]; then
 
-    bcftools query -f'%CHROM\t%POS0\t%END\n' ${indels} > indel-sites.bed
+        bedtools subtract -a all-sites.bed -b passed-sites.bed > ${base}-low-cov-sites.bed
 
-    bedtools subtract -a ${base}-low-cov-sites.bed -b indel-sites.bed > ${base}-mask-sites.bed
+        bcftools query -f'%CHROM\t%POS0\t%END\n' ${indels} > indel-sites.bed
 
-    num_mask=\$(cat ${base}-mask-sites.bed | wc -l)
+        bedtools subtract -a ${base}-low-cov-sites.bed -b indel-sites.bed > ${base}-mask-sites.bed
+    else
+        bioawk -c fastx '{print \$name"\t0\t"length(\$seq)}' ${correctedRef} > ${base}-mask-sites.bed
+    fi
+
+    num_mask=\$(bioawk -c bed 'BEGIN{SITES=0} {SITES+=\$end-\$start } END{print SITES}' ${base}-mask-sites.bed)
 
     bedtools maskfasta -fi ${correctedRef} -bed ${base}-mask-sites.bed -fo masked.fasta
 
@@ -689,7 +699,7 @@ process Generate_Consensus {
 
     seq_len=\$(bioawk -c fastx '{ print length(\$seq) }' < ${base}-consensus.fasta)
 
-    coverage=\$(python3 ${baseDir}/scripts/calculate_genome_coverage.py -i ${base}-consensus-fasta)
+    coverage=\$(python3 ${baseDir}/scripts/calculate_genome_coverage.py -i ${base}-consensus.fasta)
 
     summary="${existingSummary},\$num_mask,\$coverage"
     """

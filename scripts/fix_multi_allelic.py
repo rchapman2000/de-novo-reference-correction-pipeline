@@ -3,7 +3,13 @@ import os
 import argparse as ap
 import vcf
 
+
+# NOTE: This script was designed to handle a VCF file with genotyping information removed (See remove_genotype_vcf.py for
+# the method used to do so)
+
 def main():
+
+    # Creates an argument parser to define/handle user-supplied arguments.
     parser = ap.ArgumentParser()
 
     parser.add_argument('-i', '--input', required = True, type=str, \
@@ -16,8 +22,10 @@ def main():
     # Reads the VCF using a vcf reader.
     vcf_reader = vcf.Reader(open(args.infile, 'r'))
     # Opens a vcf output stream and passes the input vcf reader
-    # to perserve the heading in the output file.
+    # to preserve the heading in the output file.
     vcf_writer = vcf.Writer(open(args.outfile, 'w+'), vcf_reader)
+
+    #print(vcf_reader.formats)
 
     # Loops over the records in the VCF
     for rec in vcf_reader:
@@ -53,18 +61,14 @@ def main():
                 elif x == "NUMALT":
                     newInfo[x] = 1
                 else:
-                    # If not, addthe information field into the new
+                    # If not, add the information field into the new
                     # information object.
                     newInfo[x] = rec.INFO[x]
+                        
 
             # Change the copy record's information to the 
             # altered info fields.
             toWrite.INFO = newInfo
-        
-        # Remove any genotyping information from the VCF
-        # (As this information is likely changed from multiallelic sites,
-        # and not used in my downstream analysis.)
-        toWrite.samples = []
 
         vcf_writer.write_record(toWrite)
 

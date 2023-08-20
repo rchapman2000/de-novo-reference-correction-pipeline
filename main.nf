@@ -66,7 +66,7 @@ def createSummaryHeader(dedupe, hostRef, hostIdx) {
 
     // Finally, the following statistics will be collected no matter what options the
     // user supplies.
-    FinalHeader = FinalHeader + "Contigs,Scaffolds,Contigs Aligned to Reference,Variants Applid to Reference,Reads Mapped to Corrected Reference,Average Read Depth,SNPs,Indels,Masked Sites,Coverage"
+    FinalHeader = FinalHeader + "Contigs,Scaffolds,Contigs Aligned to Reference,Variants Applied to Reference,Reads Mapped to Corrected Reference,Average Read Depth,SNPs,Indels,Masked Sites,Coverage"
 
     // Return the assembled header.
     return FinalHeader
@@ -117,7 +117,7 @@ include { Generate_Consensus } from "./modules.nf"
 include { Write_Summary } from "./modules.nf"
 
 
-
+inDir = ''
 // Checks the input parameter
 if (params.input == false) {
     // If the parameter is not set, notify the user and exit.
@@ -129,12 +129,18 @@ else if (!(file(params.input).isDirectory())) {
     println "ERROR: ${params.input} is not an existing directory."
     exit(1)
 }
+else {
+    // If the parameter is set and the directory exists, convert the value provided
+    // into a file type to get the absolute path, and then convert back to a string to be
+    // used in the pipeline.
+    inDir = file(params.input).toString()
+}
 
 // Create a channel for hte input files.
 inputFiles_ch = Channel
     // Pull from pairs of files (illumina fastq files denoted by having R1 or R2 in
     // the file name).
-    .fromFilePairs("${params.input}*_R{1,2}*.fastq.gz")
+    .fromFilePairs("${inDir}/*_R{1,2}*.fastq*")
     // The .fromFilePairs() function spits out a list where the first 
     // item is the base file name, and the second is a list of the files.
     // This command creates a tuple with the base file name and two files.
